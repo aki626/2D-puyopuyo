@@ -91,10 +91,9 @@ canvas {
 </head>
 <body>
 
-<h1>🌈 Aki Puyo Engine X – 完全版</h1>
+<h1>🌈 Aki Puyo Engine X – 1人用 完璧版</h1>
 
 <canvas id="p1" width="240" height="480"></canvas>
-<canvas id="p2" width="240" height="480"></canvas>
 
 <div id="chainText"></div>
 
@@ -302,7 +301,6 @@ class PuyoGame {
 }
 
 const game1 = new PuyoGame(document.getElementById("p1"));
-const game2 = new PuyoGame(document.getElementById("p2"));
 
 document.addEventListener("keydown",e=>{
   if(e.key==="a" && game1.canMove(-1,0)) game1.piece.x--;
@@ -326,7 +324,6 @@ function loop(time){
   if(mobile.down && game1.canMove(0,1)) game1.piece.y++;
 
   game1.update(time);
-  game2.update(time);
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
