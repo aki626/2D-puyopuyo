@@ -2,71 +2,102 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>2D Puyo Puyo X</title>
-<style>
-  body {
-    background:#0a0018;
-    color:#fff;
-    text-align:center;
-    font-family:sans-serif;
-  }
-  canvas {
-    background:#120022;
-    margin:10px;
-    border:2px solid #ff00ff;
-    box-shadow:0 0 20px #ff00ff;
-  }
+<title>Aki Puyo Engine X</title>
 
-  /* スマホ操作ボタン */
+<style>
+body {
+  background: radial-gradient(circle at center, #0a0018, #000);
+  color: #fff;
+  text-align: center;
+  font-family: "Noto Sans JP", sans-serif;
+  overflow-x: hidden;
+}
+
+h1 {
+  font-size: 32px;
+  margin-top: 20px;
+  color: #ff00ff;
+  text-shadow: 0 0 15px #ff00ff;
+}
+
+canvas {
+  background: #120022;
+  margin: 10px;
+  border: 3px solid #ff00ff;
+  border-radius: 10px;
+  box-shadow: 0 0 25px #ff00ff, 0 0 50px #9900ff inset;
+}
+
+#chainText {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 60px;
+  color: #ff00ff;
+  text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff33ff;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 15px;
+  z-index: 9999;
+}
+
+.btn {
+  width: 70px;
+  height: 70px;
+  background: #1a002a;
+  border: 2px solid #ff00ff;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 22px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  box-shadow: 0 0 15px #ff00ff;
+  transition: 0.15s;
+}
+
+.btn:active {
+  transform: scale(0.9);
+  box-shadow: 0 0 25px #ff33ff;
+  border-color: #ff33ff;
+}
+
+@media (max-width: 600px) {
+  canvas {
+    width: 180px !important;
+    height: 360px !important;
+  }
   #controls {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 15px;
-    z-index: 9999;
+    bottom: 10px;
   }
   .btn {
-    width: 70px;
-    height: 70px;
-    background: #222;
-    border: 2px solid #fff;
-    border-radius: 10px;
-    color: #fff;
-    font-size: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    user-select: none;
+    width: 60px;
+    height: 60px;
+    font-size: 18px;
   }
-
-  #chainText {
-    position: fixed;
-    top: 40%;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 60px;
-    color: #ff00ff;
-    text-shadow: 0 0 20px #ff00ff;
-    pointer-events:none;
-    opacity:0;
-    transition: opacity 0.3s;
-  }
+}
 </style>
 </head>
 <body>
 
 <h1>🌈 Aki Puyo Engine X – 完全版</h1>
 
-<!-- 2P対戦用キャンバス -->
 <canvas id="p1" width="240" height="480"></canvas>
 <canvas id="p2" width="240" height="480"></canvas>
 
-<!-- 連鎖テキスト -->
 <div id="chainText"></div>
 
-<!-- スマホ操作ボタン -->
 <div id="controls">
   <div class="btn" id="left">←</div>
   <div class="btn" id="right">→</div>
@@ -126,7 +157,6 @@ class PuyoGame {
     const ctx = this.ctx;
     ctx.clearRect(0,0,240,480);
 
-    // field
     for(let y=0;y<this.ROWS;y++){
       for(let x=0;x<this.COLS;x++){
         if(this.field[y][x]){
@@ -140,7 +170,6 @@ class PuyoGame {
       }
     }
 
-    // piece
     for(const b of this.piece.blocks){
       this.drawPuyo(
         (this.piece.x+b.x)*this.SIZE + this.SIZE/2,
@@ -237,7 +266,7 @@ class PuyoGame {
         this.field[c.y][c.x]=null;
       }
       this.applyGravity();
-      this.clearPuyo(); // 連鎖チェック
+      this.clearPuyo();
     } else {
       this.chainCount = 0;
     }
@@ -272,11 +301,9 @@ class PuyoGame {
   }
 }
 
-// 2Pゲーム作成
 const game1 = new PuyoGame(document.getElementById("p1"));
 const game2 = new PuyoGame(document.getElementById("p2"));
 
-// PC操作（P1）
 document.addEventListener("keydown",e=>{
   if(e.key==="a" && game1.canMove(-1,0)) game1.piece.x--;
   if(e.key==="d" && game1.canMove(1,0)) game1.piece.x++;
@@ -284,7 +311,6 @@ document.addEventListener("keydown",e=>{
   if(e.key==="w") game1.rotate();
 });
 
-// スマホ操作（P1）
 const mobile = {left:false,right:false,down:false};
 document.getElementById("left").ontouchstart = ()=>mobile.left=true;
 document.getElementById("left").ontouchend = ()=>mobile.left=false;
