@@ -2,10 +2,20 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Aki Puyo Engine</title>
+<title>Aki Puyo Engine X</title>
 <style>
-  body { background:#0a0018; color:#fff; text-align:center; font-family:sans-serif; }
-  canvas { background:#120022; margin:10px; border:2px solid #ff00ff; box-shadow:0 0 20px #ff00ff; }
+  body {
+    background:#0a0018;
+    color:#fff;
+    text-align:center;
+    font-family:sans-serif;
+  }
+  canvas {
+    background:#120022;
+    margin:10px;
+    border:2px solid #ff00ff;
+    box-shadow:0 0 20px #ff00ff;
+  }
 
   /* スマホ操作ボタン */
   #controls {
@@ -30,15 +40,31 @@
     align-items: center;
     user-select: none;
   }
+
+  #chainText {
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 60px;
+    color: #ff00ff;
+    text-shadow: 0 0 20px #ff00ff;
+    pointer-events:none;
+    opacity:0;
+    transition: opacity 0.3s;
+  }
 </style>
 </head>
 <body>
 
-<h1>🌈 Aki Puyo Engine – 2P + Neon + Mobile</h1>
+<h1>🌈 Aki Puyo Engine X – 完全版</h1>
 
 <!-- 2P対戦用キャンバス -->
 <canvas id="p1" width="240" height="480"></canvas>
 <canvas id="p2" width="240" height="480"></canvas>
+
+<!-- 連鎖テキスト -->
+<div id="chainText"></div>
 
 <!-- スマホ操作ボタン -->
 <div id="controls">
@@ -57,6 +83,7 @@ class PuyoGame {
     this.SIZE = 40;
 
     this.colors = ["#ff3366","#ffcc00","#33ff66","#3399ff","#cc33ff"];
+    this.faces = ["😄","😳","😵"];
 
     this.field = Array.from({length:this.ROWS},()=>Array(this.COLS).fill(null));
 
@@ -64,6 +91,8 @@ class PuyoGame {
 
     this.lastFall = 0;
     this.fallSpeed = 500;
+
+    this.chainCount = 0;
   }
 
   spawnPiece(){
@@ -71,10 +100,26 @@ class PuyoGame {
       x: 2,
       y: -1,
       blocks: [
-        {x:0, y:0, color:this.colors[Math.floor(Math.random()*5)]},
-        {x:0, y:-1, color:this.colors[Math.floor(Math.random()*5)]}
+        {x:0, y:0, color:this.colors[Math.floor(Math.random()*5)], face:"😄"},
+        {x:0, y:-1, color:this.colors[Math.floor(Math.random()*5)], face:"😄"}
       ]
     };
+  }
+
+  drawPuyo(x, y, color, face){
+    const ctx = this.ctx;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, this.SIZE/2 - 4, 0, Math.PI*2);
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 20;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = "#fff";
+    ctx.font = "20px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(face, x, y+6);
   }
 
   draw(){
@@ -85,36 +130,24 @@ class PuyoGame {
     for(let y=0;y<this.ROWS;y++){
       for(let x=0;x<this.COLS;x++){
         if(this.field[y][x]){
-          ctx.fillStyle = this.field[y][x];
-          ctx.beginPath();
-          ctx.arc(
+          this.drawPuyo(
             x*this.SIZE + this.SIZE/2,
             y*this.SIZE + this.SIZE/2,
-            this.SIZE/2 - 4,
-            0, Math.PI*2
+            this.field[y][x].color,
+            this.field[y][x].face
           );
-          ctx.shadowColor = this.field[y][x];
-          ctx.shadowBlur = 15;
-          ctx.fill();
-          ctx.shadowBlur = 0;
         }
       }
     }
 
     // piece
     for(const b of this.piece.blocks){
-      ctx.fillStyle = b.color;
-      ctx.beginPath();
-      ctx.arc(
+      this.drawPuyo(
         (this.piece.x+b.x)*this.SIZE + this.SIZE/2,
         (this.piece.y+b.y)*this.SIZE + this.SIZE/2,
-        this.SIZE/2 - 4,
-        0, Math.PI*2
+        b.color,
+        b.face
       );
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = 20;
-      ctx.fill();
-      ctx.shadowBlur = 0;
     }
   }
 
@@ -142,10 +175,27 @@ class PuyoGame {
     for(const b of this.piece.blocks){
       let x = this.piece.x + b.x;
       let y = this.piece.y + b.y;
-      if(y>=0) this.field[y][x] = b.color;
+      if(y>=0) this.field[y][x] = {color:b.color, face:"😵"};
     }
     this.clearPuyo();
     this.spawnPiece();
+  }
+
+  explode(x, y, color){
+    const ctx = this.ctx;
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.arc(x, y, this.SIZE, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  showChain(n){
+    const t = document.getElementById("chainText");
+    t.innerText = `${n}連鎖！`;
+    t.style.opacity = 1;
+    setTimeout(()=>t.style.opacity=0, 700);
   }
 
   clearPuyo(){
@@ -155,7 +205,7 @@ class PuyoGame {
     const dfs = (x,y,color,list)=>{
       if(x<0||x>=this.COLS||y<0||y>=this.ROWS) return;
       if(visited[y][x]) return;
-      if(this.field[y][x]!==color) return;
+      if(!this.field[y][x] || this.field[y][x].color!==color) return;
       visited[y][x]=true;
       list.push({x,y});
       dfs(x+1,y,color,list);
@@ -168,17 +218,28 @@ class PuyoGame {
       for(let x=0;x<this.COLS;x++){
         if(this.field[y][x]){
           let list=[];
-          dfs(x,y,this.field[y][x],list);
+          dfs(x,y,this.field[y][x].color,list);
           if(list.length>=4) toClear.push(...list);
         }
       }
     }
 
     if(toClear.length>0){
+      this.chainCount++;
+      this.showChain(this.chainCount);
+
       for(const c of toClear){
+        this.explode(
+          c.x*this.SIZE + this.SIZE/2,
+          c.y*this.SIZE + this.SIZE/2,
+          this.field[c.y][c.x].color
+        );
         this.field[c.y][c.x]=null;
       }
       this.applyGravity();
+      this.clearPuyo(); // 連鎖チェック
+    } else {
+      this.chainCount = 0;
     }
   }
 
