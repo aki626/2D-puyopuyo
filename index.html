@@ -2,165 +2,247 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>2D Puyo Puyo</title>
+<title>Aki Puyo Engine</title>
 <style>
-  body { background:#111; color:#fff; text-align:center; }
-  canvas { background:#222; margin-top:20px; }
+  body { background:#0a0018; color:#fff; text-align:center; font-family:sans-serif; }
+  canvas { background:#120022; margin:10px; border:2px solid #ff00ff; box-shadow:0 0 20px #ff00ff; }
+
+  /* スマホ操作ボタン */
+  #controls {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    z-index: 9999;
+  }
+  .btn {
+    width: 70px;
+    height: 70px;
+    background: #222;
+    border: 2px solid #fff;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+  }
 </style>
 </head>
 <body>
 
-<h1>2D Puyo Puyo</h1>
-<canvas id="game" width="240" height="480"></canvas>
+<h1>🌈 Aki Puyo Engine – 2P + Neon + Mobile</h1>
+
+<!-- 2P対戦用キャンバス -->
+<canvas id="p1" width="240" height="480"></canvas>
+<canvas id="p2" width="240" height="480"></canvas>
+
+<!-- スマホ操作ボタン -->
+<div id="controls">
+  <div class="btn" id="left">←</div>
+  <div class="btn" id="right">→</div>
+  <div class="btn" id="rotate">↻</div>
+  <div class="btn" id="down">↓</div>
+</div>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+class PuyoGame {
+  constructor(canvas){
+    this.ctx = canvas.getContext("2d");
+    this.COLS = 6;
+    this.ROWS = 12;
+    this.SIZE = 40;
 
-const COLS = 6;
-const ROWS = 12;
-const SIZE = 40;
+    this.colors = ["#ff3366","#ffcc00","#33ff66","#3399ff","#cc33ff"];
 
-const colors = ["red","yellow","green","blue","purple"];
+    this.field = Array.from({length:this.ROWS},()=>Array(this.COLS).fill(null));
 
-let field = Array.from({length:ROWS},()=>Array(COLS).fill(null));
+    this.spawnPiece();
 
-let piece = {
-  x: 2,
-  y: 0,
-  blocks: [
-    {x:0, y:0, color:colors[Math.floor(Math.random()*5)]},
-    {x:0, y:-1, color:colors[Math.floor(Math.random()*5)]}
-  ]
-};
+    this.lastFall = 0;
+    this.fallSpeed = 500;
+  }
 
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  spawnPiece(){
+    this.piece = {
+      x: 2,
+      y: -1,
+      blocks: [
+        {x:0, y:0, color:this.colors[Math.floor(Math.random()*5)]},
+        {x:0, y:-1, color:this.colors[Math.floor(Math.random()*5)]}
+      ]
+    };
+  }
 
-  // field
-  for(let y=0;y<ROWS;y++){
-    for(let x=0;x<COLS;x++){
-      if(field[y][x]){
-        ctx.fillStyle = field[y][x];
-        ctx.fillRect(x*SIZE,y*SIZE,SIZE,SIZE);
+  draw(){
+    const ctx = this.ctx;
+    ctx.clearRect(0,0,240,480);
+
+    // field
+    for(let y=0;y<this.ROWS;y++){
+      for(let x=0;x<this.COLS;x++){
+        if(this.field[y][x]){
+          ctx.fillStyle = this.field[y][x];
+          ctx.beginPath();
+          ctx.arc(
+            x*this.SIZE + this.SIZE/2,
+            y*this.SIZE + this.SIZE/2,
+            this.SIZE/2 - 4,
+            0, Math.PI*2
+          );
+          ctx.shadowColor = this.field[y][x];
+          ctx.shadowBlur = 15;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
       }
+    }
+
+    // piece
+    for(const b of this.piece.blocks){
+      ctx.fillStyle = b.color;
+      ctx.beginPath();
+      ctx.arc(
+        (this.piece.x+b.x)*this.SIZE + this.SIZE/2,
+        (this.piece.y+b.y)*this.SIZE + this.SIZE/2,
+        this.SIZE/2 - 4,
+        0, Math.PI*2
+      );
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 20;
+      ctx.fill();
+      ctx.shadowBlur = 0;
     }
   }
 
-  // piece
-  for(const b of piece.blocks){
-    ctx.fillStyle = b.color;
-    ctx.fillRect((piece.x+b.x)*SIZE,(piece.y+b.y)*SIZE,SIZE,SIZE);
-  }
-}
-
-function canMove(dx,dy){
-  for(const b of piece.blocks){
-    let nx = piece.x + b.x + dx;
-    let ny = piece.y + b.y + dy;
-    if(nx<0 || nx>=COLS || ny>=ROWS) return false;
-    if(ny>=0 && field[ny][nx]) return false;
-  }
-  return true;
-}
-
-function rotate(){
-  let b = piece.blocks[1];
-  let nx = -b.y;
-  let ny = b.x;
-  if(canMove(nx-b.x, ny-b.y)){
-    b.x = nx;
-    b.y = ny;
-  }
-}
-
-function lockPiece(){
-  for(const b of piece.blocks){
-    let x = piece.x + b.x;
-    let y = piece.y + b.y;
-    if(y>=0) field[y][x] = b.color;
-  }
-  clearPuyo();
-  spawnPiece();
-}
-
-function spawnPiece(){
-  piece = {
-    x: 2,
-    y: 0,
-    blocks: [
-      {x:0, y:0, color:colors[Math.floor(Math.random()*5)]},
-      {x:0, y:-1, color:colors[Math.floor(Math.random()*5)]}
-    ]
-  };
-}
-
-function clearPuyo(){
-  let visited = Array.from({length:ROWS},()=>Array(COLS).fill(false));
-  let toClear = [];
-
-  function dfs(x,y,color,list){
-    if(x<0||x>=COLS||y<0||y>=ROWS) return;
-    if(visited[y][x]) return;
-    if(field[y][x]!==color) return;
-    visited[y][x]=true;
-    list.push({x,y});
-    dfs(x+1,y,color,list);
-    dfs(x-1,y,color,list);
-    dfs(x,y+1,color,list);
-    dfs(x,y-1,color,list);
+  canMove(dx,dy){
+    for(const b of this.piece.blocks){
+      let nx = this.piece.x + b.x + dx;
+      let ny = this.piece.y + b.y + dy;
+      if(nx<0 || nx>=this.COLS || ny>=this.ROWS) return false;
+      if(ny>=0 && this.field[ny][nx]) return false;
+    }
+    return true;
   }
 
-  for(let y=0;y<ROWS;y++){
-    for(let x=0;x<COLS;x++){
-      if(field[y][x]){
-        let list=[];
-        dfs(x,y,field[y][x],list);
-        if(list.length>=4) toClear.push(...list);
-      }
+  rotate(){
+    let b = this.piece.blocks[1];
+    let nx = -b.y;
+    let ny = b.x;
+    if(this.canMove(nx-b.x, ny-b.y)){
+      b.x = nx;
+      b.y = ny;
     }
   }
 
-  for(const c of toClear){
-    field[c.y][c.x]=null;
+  lockPiece(){
+    for(const b of this.piece.blocks){
+      let x = this.piece.x + b.x;
+      let y = this.piece.y + b.y;
+      if(y>=0) this.field[y][x] = b.color;
+    }
+    this.clearPuyo();
+    this.spawnPiece();
   }
 
-  if(toClear.length>0) applyGravity();
-}
+  clearPuyo(){
+    let visited = Array.from({length:this.ROWS},()=>Array(this.COLS).fill(false));
+    let toClear = [];
 
-function applyGravity(){
-  for(let x=0;x<COLS;x++){
-    for(let y=ROWS-1;y>=0;y--){
-      if(!field[y][x]){
-        for(let yy=y-1;yy>=0;yy--){
-          if(field[yy][x]){
-            field[y][x]=field[yy][x];
-            field[yy][x]=null;
-            break;
+    const dfs = (x,y,color,list)=>{
+      if(x<0||x>=this.COLS||y<0||y>=this.ROWS) return;
+      if(visited[y][x]) return;
+      if(this.field[y][x]!==color) return;
+      visited[y][x]=true;
+      list.push({x,y});
+      dfs(x+1,y,color,list);
+      dfs(x-1,y,color,list);
+      dfs(x,y+1,color,list);
+      dfs(x,y-1,color,list);
+    };
+
+    for(let y=0;y<this.ROWS;y++){
+      for(let x=0;x<this.COLS;x++){
+        if(this.field[y][x]){
+          let list=[];
+          dfs(x,y,this.field[y][x],list);
+          if(list.length>=4) toClear.push(...list);
+        }
+      }
+    }
+
+    if(toClear.length>0){
+      for(const c of toClear){
+        this.field[c.y][c.x]=null;
+      }
+      this.applyGravity();
+    }
+  }
+
+  applyGravity(){
+    for(let x=0;x<this.COLS;x++){
+      for(let y=this.ROWS-1;y>=0;y--){
+        if(!this.field[y][x]){
+          for(let yy=y-1;yy>=0;yy--){
+            if(this.field[yy][x]){
+              this.field[y][x]=this.field[yy][x];
+              this.field[yy][x]=null;
+              break;
+            }
           }
         }
       }
     }
   }
+
+  update(time){
+    if(time - this.lastFall > this.fallSpeed){
+      if(this.canMove(0,1)){
+        this.piece.y++;
+      } else {
+        this.lockPiece();
+      }
+      this.lastFall = time;
+    }
+    this.draw();
+  }
 }
 
+// 2Pゲーム作成
+const game1 = new PuyoGame(document.getElementById("p1"));
+const game2 = new PuyoGame(document.getElementById("p2"));
+
+// PC操作（P1）
 document.addEventListener("keydown",e=>{
-  if(e.key==="a" && canMove(-1,0)) piece.x--;
-  if(e.key==="d" && canMove(1,0)) piece.x++;
-  if(e.key==="s" && canMove(0,1)) piece.y++;
-  if(e.key==="w") rotate();
+  if(e.key==="a" && game1.canMove(-1,0)) game1.piece.x--;
+  if(e.key==="d" && game1.canMove(1,0)) game1.piece.x++;
+  if(e.key==="s" && game1.canMove(0,1)) game1.piece.y++;
+  if(e.key==="w") game1.rotate();
 });
 
-function update(){
-  if(canMove(0,1)){
-    piece.y++;
-  } else {
-    lockPiece();
-  }
-  draw();
-}
+// スマホ操作（P1）
+const mobile = {left:false,right:false,down:false};
+document.getElementById("left").ontouchstart = ()=>mobile.left=true;
+document.getElementById("left").ontouchend = ()=>mobile.left=false;
+document.getElementById("right").ontouchstart = ()=>mobile.right=true;
+document.getElementById("right").ontouchend = ()=>mobile.right=false;
+document.getElementById("down").ontouchstart = ()=>mobile.down=true;
+document.getElementById("down").ontouchend = ()=>mobile.down=false;
+document.getElementById("rotate").ontouchstart = ()=>game1.rotate();
 
-setInterval(update,500);
+function loop(time){
+  if(mobile.left && game1.canMove(-1,0)) game1.piece.x--;
+  if(mobile.right && game1.canMove(1,0)) game1.piece.x++;
+  if(mobile.down && game1.canMove(0,1)) game1.piece.y++;
+
+  game1.update(time);
+  game2.update(time);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 </script>
 
 </body>
