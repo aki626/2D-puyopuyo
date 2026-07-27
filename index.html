@@ -91,7 +91,7 @@ canvas {
 </head>
 <body>
 
-<h1>🌈 Aki Puyo Engine X – 1人用 完璧版</h1>
+<h1>🌈 Aki Puyo Engine X – 完璧版（回転入り）</h1>
 
 <canvas id="p1" width="240" height="480"></canvas>
 
@@ -190,9 +190,10 @@ class PuyoGame {
   }
 
   rotate(){
-    let b = this.piece.blocks[1];
+    let b = this.piece.blocks[1]; // 回転するぷよ
     let nx = -b.y;
     let ny = b.x;
+
     if(this.canMove(nx-b.x, ny-b.y)){
       b.x = nx;
       b.y = ny;
